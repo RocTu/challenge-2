@@ -1,0 +1,27 @@
+# Compose uses the modern Compose Specification; no "version:" key is required.
+# https://docs.docker.com/reference/compose-file/
+services:
+  orchestrator:
+    image: orchestrator:dev          # compose will tag the build with this name
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Map your app's port out if it's a web service
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      # add more env like DATABASE_URL=... here
+    # For local dev hot-reload; comment out for production images
+    volumes:
+      - ./:/app
+    # If your entrypoint isn’t app.py, override it here:
+    # command: ["python", "-m", "orchestrator"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
