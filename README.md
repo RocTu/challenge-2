@@ -14,10 +14,9 @@ Project layout
 # Build & run directly
 # build
 docker build -t orchestrator:dev .
-
-# run (map host:container)
-# If your app listens on 3000, map 8080:3000; if it listens on 8080, map 8080:8080
 docker run --rm -p 8080:3000 --env-file .env orchestrator:dev
+
+
 
 # Quick start (docker-compose)
 docker compose up --build
