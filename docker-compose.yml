@@ -1,20 +1,20 @@
-version: "3.9"
 services:
   orchestrator:
     build: .
-    image: ghcr.io/OWNER/REPO:dev
+    # image tag is optional for local dev; keep a simple local name if you want
+    image: orchestrator:dev
     env_file: .env
     ports:
-      - "8080:8080"
+      - "8080:3000"          # app listens on 3000; map host 8080 -> 3000
     command: ["node", "dist/app.js"]
     restart: unless-stopped
 
   api:
     build: .
-    image: ghcr.io/OWNER/REPO:dev
+    image: orchestrator:dev  # reuse the same built image
     env_file: .env
     ports:
-      - "8081:8080"
+      - "8081:3000"          # expose API on a different host port
     command: ["node", "dist/api.js"]
     restart: unless-stopped
 
