@@ -1,132 +1,158 @@
-# Orchestrator
+# Swap Optimizer – DevOps Candidate Challenge
 
-A tiny, zero-dependency Python HTTP service containerized with Docker, optionally orchestrated via docker-compose, and built automatically by GitHub Actions on every push to `main` (tagged with the commit SHA).
+Welcome! This project is a real-world simulation of a token swap optimizer using live Chainlink price feeds on Ethereum mainnet. It includes both a backend orchestrator and a lightweight API layer. Your role is to run, debug, and improve the system as a DevOps engineer.
 
-## Overview
+---
 
-- **Language:** Python 3.12 (slim base image)
-- **Entrypoint:** `app.py` (standard-library HTTP server)
-- **Endpoints:**
-  - `GET /health` → returns `ok` (health probe)
-  - `GET /` or `/ping` → returns `orchestrator up`
+## Project Overview
 
-## Project Layout
+This app continuously:
+- Connects to Ethereum via Infura
+- Fetches token prices from Chainlink
+- Calculates optimal token swap paths
+- Logs all swap paths to `logs/swap_routes.json`
+- Emits uptime and heartbeat logs to `logs/output.log`
 
-```
-.
-├── app.py
-├── Dockerfile
-├── docker-compose.yml          # optional for local dev
-├── .dockerignore               # recommended
-└── .github
-    └── workflows
-        └── build-and-push.yml  # GitHub Actions (GHCR)
-```
+A REST API (`api.js`) exposes:
+- `/api/routes`: Latest swap paths
+- `/api/routes/:from/:to`: Single pair lookup
+- `/healthz`: System heartbeat check based on logs
+- `/metrics`: Prometheus-style metrics (uptime, memory, CPU)
 
-Suggested `.dockerignore`:
+---
 
-```
-.venv/
-__pycache__/
-*.pyc
-.git/
-.DS_Store
-.env
-.env.*
-```
+## Your Tasks
 
-## Run Locally
+### 1. Setup and Launch
 
-### Without Docker
+Run the app using the provided scripts:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python app.py
-# verify
-curl -fsS http://127.0.0.1:8000/health
+chmod +x setup.sh start.sh
+./setup.sh
+./start.sh
 ```
 
-### With Docker
+Ensure you configure `.env` from `.env_example` with your Infura Project ID.
+
+#### Development
+- Run in Dev Mode
 ```bash
-docker build -t orchestrator:dev .
-docker run --rm -p 8000:8000 orchestrator:dev
-# verify
-curl -fsS http://127.0.0.1:8000/health
+npm install
+npm run dev
 ```
-
-### With docker-compose (recommended for dev)
+- Build and Run
 ```bash
-docker compose up --build
-# verify
-curl -fsS http://127.0.0.1:8000/health
+npm run build
+npm start
 ```
 
-## Configuration
+### 2. Observe the Logs
 
-Environment variables:
+Monitor live status:
 
-| Name        | Default | Description                             |
-| ----------- | ------- | --------------------------------------- |
-| `PORT`      | `8000`  | Port the app listens on                 |
-| `LOG_LEVEL` | `INFO`  | `DEBUG`, `INFO`, `WARNING`, `ERROR`     |
-
-Examples:
 ```bash
-docker run --rm -p 8080:8080 -e PORT=8080 orchestrator:dev
-docker compose run --rm -e LOG_LEVEL=DEBUG orchestrator
+tail -f logs/output.log
+tail -f logs/swap_routes.json
 ```
 
-## CI/CD (GitHub Actions → GHCR)
+Also visit:
 
-A workflow at `.github/workflows/build-and-push.yml` builds and pushes an image on every push to `main`. It tags images with **`latest`** and the **commit SHA**.
+- http://localhost:4000/api/routes
+- http://localhost:4000/healthz
+- http://localhost:4000/metrics
 
-Resulting image names:
+### 3. Debug: Silent Failure Simulation
+
+After 30 seconds, `output.log` will stop updating — without crashing the app. Your job:
+
+- Identify and fix the root cause of this silent failure
+- Make heartbeat logs reliable again
+
+### 4. Improve Shell Scripts
+
+Refactor and harden:
+
+- `setup.sh`: Validate environment, improve logging
+- `start.sh`: Add safety features, background tasks, or monitoring
+
+### 5. Containerize the Application
+
+- Create a `Dockerfile` to run `app.js` and `api.js`
+- Optional: Add `docker-compose.yml` for easier orchestration
+- Ensure logs persist and `.env` can be injected cleanly
+
+### 6. Create a GitHub Actions workflow that:
+
+- Triggers on push events on the main branch
+- Builds a Docker image of the project
+- Tags the image using the current Git commit SHA
+- (Optional) Pushes the image to a container registry (e.g., Docker Hub or GitHub Container Registry)
+
+### 7. Bonus (Optional)
+
+You may optionally:
+
+- Build a log monitoring watchdog (bash or node)
+- Add `logrotate` or timestamp-based log separation
+- Serve a `/status.html` page from the API with live stats
+    
+---
+
+## Functional Endpoints
+
+| Endpoint                  | Description                                 |
+|---------------------------|---------------------------------------------|
+| `/api/routes`             | All recent swap paths                       |
+| `/api/routes/:from/:to`   | One specific token pair                     |
+| `/healthz`                | Uptime check (based on heartbeat log)       |
+| `/metrics`                | Prometheus metrics (uptime, memory, CPU)    |
+
+---
+
+## Project Structure
+
 ```
-ghcr.io/<owner>/<repo>:latest
-ghcr.io/<owner>/<repo>:<commit-sha>
+eth-swap-devops-challenge/
+├── setup.sh           # Setup script
+├── start.sh           # Starts app.js and api.js
+├── install.sh         # Installation script to set up and run on the client node
+├── .env_example       # Set your INFURA_URL here
+├── package.json
+├── logs/
+│   ├── output.log         # Heartbeat logs (every 5s)
+│   └── swap_routes.json   # Swap route logs (every 1m)
+│── dist/               # Build
+└── src/
+    ├── app.ts          # Orchestrator – fetches and logs paths
+    |── api.ts          # REST API
+    |── constant.ts     # Constant
+    |── graph.ts        # Graph handler
+    |── routes.ts       # health endpoints
+    └── utis.ts         # Utils
 ```
 
-> If this repo is **public** and you want the container to be publicly pullable, open GitHub → **Packages** → the image page → **Package settings** → set **Visibility** to **Public**.
+---
 
-### Pull & run (from any machine)
-```bash
-docker pull ghcr.io/<owner>/<repo>:latest
-docker run --rm -p 8000:8000 ghcr.io/<owner>/<repo>:latest
-```
+## Requirements
 
-If your package is private, log in first:
-```bash
-echo $GHCR_PAT | docker login ghcr.io -u <your-gh-username> --password-stdin
-```
+- Node.js 18+
+- Bash (for script execution)
+- TypeScript
+- Infura project ID for Ethereum Mainnet (free to register at https://infura.io)
 
-> PAT requires scope `read:packages` (and `write:packages` if pushing locally).
+---
 
-## Create & Push a New Public Repository
+## 🔍 Evaluation Criteria
 
-1. On GitHub, create a **public** repo (e.g., `orchestrator`).
-2. Locally:
-   ```bash
-   git init
-   git add .
-   git commit -m "chore: containerize orchestrator + CI"
-   git branch -M main
-   git remote add origin git@github.com:<owner>/<repo>.git
-   git push -u origin main
-   ```
-3. Check the **Actions** tab to see the build run and the **Packages** section for your image.
+| Category        | Expectations                                  |
+|----------------|-----------------------------------------------|
+| **Reliability** | Can you make the service stable?             |
+| **Observability** | Do you improve logs, health, metrics?       |
+| **Shell Scripting** | Are scripts clean, safe, readable?        |
+| **Containerization** | Do you build a usable Docker setup?      |
+| **Problem Solving** | Can you debug a hidden runtime issue?     |
 
-## Troubleshooting
+---
 
-- **`python: can't open file '/app/app.py'`**  
-  Ensure `app.py` exists at the repo root (same level as `Dockerfile`) or change `CMD`/compose `command` to your actual script path.
-
-- **Port conflicts**  
-  Change host mapping, e.g. `-p 8080:8000`.
-
-- **Buildkit / macOS Keychain quirks**  
-  If you hit credential-helper issues on macOS, you can temporarily build with the classic builder:  
-  `DOCKER_BUILDKIT=0 docker build -t orchestrator:dev .`
-
-## License
-
-MIT (or your preferred license).
+Good luck! Feel free to make suggestions beyond the requirements — we value initiative and clear thinking.

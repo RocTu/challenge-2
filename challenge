@@ -1,4 +1,0 @@
-Containerize the orchestrator project using a Dockerfile. Optionally include a docker-compose.yml for easier orchestration.
-Then, set up a GitHub Actions workflow that builds a Docker image on every push to the main branch and tags the image with the commit SHA.  
-
-Create a new public GitHub repository, commit your updates there, and share the repository link in the textarea. 
